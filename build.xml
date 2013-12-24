@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!--ant 脚本文件 -->
-<project name="stcdemo-app" default="make-dist" basedir="." >
+<project name="stcserver-im" default="make-dist" basedir="." >
 
 	<!--设置下面要用到的属性-->
 	<property environment="env" />
 	<property name="module.home" value="." />
-	<property name="module.name" value="stcdemo-app" />
+	<property name="module.name" value="stcserver-im" />
 	<property name="module.version" value="v1.1.0" />
 	<property name="module.main.src" value="${module.home}/src/main/java" />
 	<property name="module.main.resources" value="${module.home}/src/main/resource" />
