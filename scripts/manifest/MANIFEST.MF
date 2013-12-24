@@ -1,0 +1,2 @@
+Main-Class: stc.skymobi.unit.StcBooter
+Class-Path: ./

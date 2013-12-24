@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--ant 脚本文件 -->
+<project name="stcdemo-app" default="make-dist" basedir="." >
+
+	<!--设置下面要用到的属性-->
+	<property environment="env" />
+	<property name="module.home" value="." />
+	<property name="module.name" value="stcdemo-app" />
+	<property name="module.version" value="v1.1.0" />
+	<property name="module.main.src" value="${module.home}/src/main/java" />
+	<property name="module.main.resources" value="${module.home}/src/main/resource" />
+	<property name="module.contrib.lib" value="../stc-lib/lib2" />
+	<property name="module.target" value="${module.home}/build" />
+	<property name="compile.script" value="${module.home}/scripts" />
+	<property name="compile.debug" value="on" />
+	<property name="compile.deprecation" value="false" />
+	<property name="compile.optimize" value="false" />
+	<property name="compile.encoding" value="UTF-8" />
+	<property name="compile.source" value="1.6" />
+	<property name="compile.target" value="1.6" />
+	<property name="build.compiler" value="org.eclipse.jdt.core.JDTCompilerAdapter" />
+
+	
+	<!--设置时间截格式化变量，当生成.jar 发布文件时要用于定义文件名-->
+	<tstamp prefix="build.">
+		<format property="timeStamp" pattern="yyyyMMdd-HHmmss" />
+	</tstamp>
+
+	<!--设置类包的环境变量-->
+	<path id="compile.classpath">
+		<path location="${module.target}/src/classes" />
+		<fileset dir="${module.contrib.lib}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<!--初始化目录-->
+	<target name="init">
+		<echo>+---------------------------------------------------+</echo>
+		<echo>|                                                   |</echo>
+		<echo>| B U I L D I N G   S T C - C A S S A N D R A       |</echo>
+		<echo>|                                                   |</echo>
+		<echo>+---------------------------------------------------+</echo>
+		<mkdir dir="${module.target}/src/classes" />
+		<mkdir dir="${module.target}/source" />
+		<mkdir dir="${module.target}/resource" />
+	</target>
+
+    <target name="hudson-dist-revision" if="env.SVN_REVISION">
+        <property name="dist.revision" value="${env.SVN_REVISION}" />
+    </target>
+    
+    <target name="default-dist-revision" unless="env.SVN_REVISION">
+        <property name="dist.revision" value="unformal" />
+    </target>
+    
+    <target name="hudson-dist-build-number" if="env.BUILD_NUMBER">
+        <property name="dist.build.number" value="${env.BUILD_NUMBER}" />
+    </target>
+    
+    <target name="default-dist-build-number" unless="env.BUILD_NUMBER">
+        <property name="dist.build.number" value="unknown" />
+    </target>
+        
+    <target name="hudson-dist-build-id" if="env.BUILD_ID">
+        <property name="dist.build.id" value="${env.BUILD_ID}" />
+    </target>
+    
+    <target name="default-dist-build-id" unless="env.BUILD_ID">
+        <property name="dist.build.id" value="${build.timeStamp}" />
+    </target>
+	
+    <target name="prepare-dep"
+        depends="hudson-dist-revision
+                ,default-dist-revision
+                ,hudson-dist-build-number
+                ,default-dist-build-number
+                ,hudson-dist-build-id
+                ,default-dist-build-id
+    	">
+    </target>
+	
+	<!--执行编译JAVA文件-->
+	<target name="compile" depends="init, prepare-dep">
+		<echo>编译源代码并拷贝资源文件</echo>
+		<javac srcdir="${module.main.src}" 
+			destdir="${module.target}/src/classes" 
+			source="${compile.source}" 
+			target="${compile.target}" 
+			debug="${compile.debug}" 
+			encoding="${compile.encoding}" 
+			failonerror="true">
+			<classpath refid="compile.classpath" />
+		</javac>
+
+		<copy todir="${module.target}/src/classes">
+			<fileset dir="${module.main.resources}">
+				<include name="**/*.*" />
+				<exclude name="**/*.properties" />
+				<exclude name="**/*.cfg" />
+				<exclude name="**/*.bsh" />
+			</fileset>
+		</copy>
+	</target>
+
+	<!--清理-->
+	<target name="clean-all">
+		<echo>清理项目..</echo>
+		<delete includeEmptyDirs="true" failonerror="false">
+			<fileset dir="${module.target}">
+				<exclude name=".svn" />
+			</fileset>
+		</delete>
+	</target>
+	
+	<target name="jar" depends="clean-all,compile">
+        <property name="module.jar.filename" value="${module.name}.jar" />
+		<property name="module.build.dir" value="${module.target}/${module.name}-${module.version}-${build.timeStamp}" />
+		<mkdir dir="${module.build.dir}" /> 
+		<mkdir dir="${module.build.dir}/bin" />
+		<mkdir dir="${module.build.dir}/lib" />
+		<mkdir dir="${module.build.dir}/units" />
+
+		<jar destfile="${module.build.dir}/bin/${module.jar.filename}" 
+			manifest="${module.home}/scripts/manifest/MANIFEST.MF">
+			<fileset dir="${module.target}/src/classes">
+				<include name="**/*.*" />
+				<exclude name="**/*.properties" />
+				<exclude name="**/*.cfg" />
+				<exclude name="**/*.bsh" />
+			</fileset>
+			
+			<restrict>
+				<name name="**/StcBooter.class" />
+				<archives>
+					<zips>
+						<fileset dir="${module.contrib.lib}" includes="**/stc-unit-repo-*.jar"/>
+					</zips>
+				</archives>
+			</restrict>
+			<restrict>
+				<name name="**/JVMUtil.class"/>
+				<archives>
+					<zips>
+						<fileset dir="${module.contrib.lib}" includes="**/stc-util-*.jar"/>
+					</zips>
+				</archives>
+			</restrict>
+			<restrict>
+				<name name="**/JMXStatusBooter.class"/>
+				<archives>
+					<zips>
+						<fileset dir="${module.contrib.lib}" includes="**/stc-jmx-*.jar"/>
+					</zips>
+				</archives>
+			</restrict>
+			<manifest>
+				<attribute name="Specification-Title" value="${module.name}" />
+				<attribute name="Specification-Version" value="${module.version}" />
+				<attribute name="Implementation-Title" value="${module.name}" />
+				<attribute name="Implementation-Version" value="${build.timeStamp}-[${module.version}]" />
+				<attribute name="Specification-Vendor" value="STC" />
+				<attribute name="Implementation-Vendor" value="STC" />
+			</manifest>
+		</jar>
+		
+		<copy todir="${module.target}/resource">
+			<fileset dir="${module.main.resources}">
+			</fileset>
+		</copy>
+		
+		<copy todir="${module.build.dir}/bin">
+			<fileset dir="${module.main.resources}">
+				<include name="**/*.properties" />
+				<include name="**/*.cfg" />
+				<include name="**/*.bsh" />
+			</fileset>
+			<fileset dir="${compile.script}/sh">
+				<include name="**/*.*" />
+			</fileset>
+			<fileset dir="${compile.script}/log">
+				<include name="**/logback.*" />
+			</fileset>
+		</copy>
+		
+		<copy todir="${module.build.dir}/lib">
+			<fileset dir="${module.contrib.lib}">
+			</fileset>
+		</copy>
+		
+		<copy todir="${module.build.dir}/units">
+			<fileset dir="${module.home}/units">
+			</fileset>
+		</copy>
+		
+	</target>
+	
+	<target name="make-dist" depends="jar">
+		<property name="dist.purefilename" value="${module.name}-${module.version}-${build.timeStamp}" />
+		<property name="dist.filename" value="${dist.purefilename}.zip" />
+		<delete includeEmptyDirs="true" failonerror="false">
+			<fileset dir="${module.home}"
+				includes="${module.name}-*.zip" />
+		</delete>
+		<zip destfile="${module.home}/${dist.filename}" level="9">
+			<mappedresources>
+				<restrict>
+					<fileset erroronmissingdir="false" dir="${module.build.dir}" />
+				</restrict>
+				<globmapper from="*" to="*" />
+			</mappedresources>
+		</zip>
+		<delete includeEmptyDirs="true" failonerror="false">
+			<fileset dir="${module.target}" />
+		</delete>
+	</target>
+	
+</project>

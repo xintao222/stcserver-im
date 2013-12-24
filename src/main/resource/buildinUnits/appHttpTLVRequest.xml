@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans>
+    <import resource="classpath:stc/skymobi/ebus/spring/Configurable.xml" />
+    
+    <bean id="tlvTransformer"
+        class = "stc.skymobi.netty.handler.codec.http.transformer.TLVTransformer" >
+        <property name="decoder">
+            <bean  factory-bean="rootRegistry"
+                factory-method="getProxyOf">
+                <constructor-arg value="protocol.tlv.decoder.${import.tlv.decoder}" />
+                <constructor-arg value="stc.skymobi.bean.tlv.decode.TLVDecoderOfBean" />
+            </bean>
+        </property>
+        <property name="targetType" value="${reqbean.class}" />
+    </bean>
+                            
+    <bean id="fireEventTransformer"
+    	class="stc.skymobi.netty.handler.codec.http.transformer.FireEventTransformer" >
+        <property name="eventBus" ref="eventBus" />
+        <property name="event" value="${reqbean.event}" />
+        <property name="impl">
+		    <bean class = "stc.skymobi.netty.handler.codec.http.transformer.CheckRequiredTransformer" >
+		        <property name="impl">
+				    <bean class = "stc.skymobi.netty.handler.codec.http.transformer.CopyRequestPropertyTransformer" >
+				        <property name="copyedProperties">
+				            <list>
+                                <bean class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+                                    <property name="staticField" value="stc.skymobi.netty.util.NettyConstants.PROPERTY_CHANNEL"/>
+                                </bean>
+				            </list>
+				        </property>
+				        <property name="propertyHttpRequest">
+                            <bean class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+                                <property name="staticField" value="stc.skymobi.netty.util.NettyConstants.HTTP_REQUEST"/>
+                            </bean>
+                        </property>
+				        <property name="useLazyBean" value="false" />
+				        <property name="impl" ref="tlvTransformer" />
+				    </bean>
+		        </property>
+		    </bean>
+		</property>
+    </bean>
+    
+    <bean id="registryController" 
+        class="stc.skymobi.netty.handler.codec.http.HttpCommandCodeRegistryController"
+        init-method="register"
+        destroy-method="unregister">
+        <property name="registry">
+		    <!-- rootRegistry from root ctx -->
+		    <bean factory-bean="rootRegistry"
+		    	factory-method="getOrCreateEntry" >
+		        <constructor-arg value="transport.http.netty.reqcmd.dispatch.${import.requestCmdDispatch}" />
+		        <constructor-arg>
+				    <bean class = "stc.skymobi.netty.handler.codec.http.transformer.CodeDispatchTransformer" />
+		        </constructor-arg>
+		   	</bean>
+        </property>
+        <property name="code" value="${reqbean.code}" />
+        <property name="transformer" ref="fireEventTransformer" />
+    </bean>
+    
+    <!--
+        this bean must not be lazily initialized if the exporting is to happen
+    -->
+    <bean id="exporter" class="stc.skymobi.jmx.PrefixableMBeanExporter"
+        lazy-init="false">
+        <constructor-arg ref="appMBeanPrefix"/>
+        <property name="beans">
+            <map>
+                <entry key=
+                    "prefix:class=business,group=${biz.name},inbound=${import.requestCmdDispatch},code=${reqbean.code},name=cmdctrl"
+                    value-ref="registryController" />
+                <entry key=
+                    "prefix:class=business,group=${biz.name},inbound=${import.requestCmdDispatch},code=${reqbean.code},name=reqTransformer"
+                    value-ref="fireEventTransformer" />
+                <entry key=
+                    "prefix:class=business,group=${biz.name},inbound=${import.requestCmdDispatch},code=${reqbean.code},name=tlvTransformer"
+                    value-ref="tlvTransformer" />
+            </map>
+        </property>
+    </bean>
+</beans>

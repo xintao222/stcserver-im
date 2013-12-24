@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans>
+    <import resource="classpath:stc/skymobi/ebus/spring/Configurable.xml" />
+    
+    <!-- provide SmartFSM instance bean -->
+    <import resource="classpath:unitrepo/stc/part/fsm/SmartFSMImpl.xml" />
+    
+        <!-- provide httpSendbackHelper bean -->
+    <import resource="classpath:stc/part/transport/NettyHttpSendbackHelperIntf.xml" />
+    
+    <!-- provide jmxExporter instance bean -->
+    <import resource="classpath:unitrepo/stc/part/fsm/SmartFSMJmxExporter.xml" />
+    
+    <bean id="businessFlow"
+        class="stc.skymobi.biz.AuthBiz" >
+        <property name="sendbackHelper" ref="httpSendbackHelper" />
+        <property name="logTimeout"   value="${log.timeout}" />
+    </bean>
+    
+    <bean id="businessContext" 
+        class="stc.skymobi.biz.AuthCtx" 
+        singleton="false">
+        <constructor-arg            ref="smartFsm"/>
+        <property name="eventBus"   ref="eventBus" />
+    </bean>
+    
+</beans>

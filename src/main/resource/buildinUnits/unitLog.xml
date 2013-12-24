@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans>
+	<import resource="classpath:stc/skymobi/ebus/spring/Configurable.xml" />
+
+	<!-- provide SmartFSM instance bean -->
+	<import resource="classpath:unitrepo/stc/part/fsm/SmartFSMImpl.xml" />
+
+	<!-- provide jmxExporter instance bean -->
+	<import resource="classpath:unitrepo/stc/part/fsm/SmartFSMJmxExporter.xml" />
+
+	<bean id="firstServiceBuilder" factory-bean="rootRegistry"
+		factory-method="getOrCreateEntry">
+		<constructor-arg value="${firstServiceName}" />
+		<constructor-arg>
+			<bean class="stc.skymobi.util.ProxyBuilder">
+				<constructor-arg value="stc.skymobi.service.IFirstService" />
+			</bean>
+		</constructor-arg>
+	</bean>
+
+	<bean id="secondServiceBuilder" factory-bean="rootRegistry"
+		factory-method="getOrCreateEntry">
+		<constructor-arg value="${secondServiceName}" />
+		<constructor-arg>
+			<bean class="stc.skymobi.util.ProxyBuilder">
+				<constructor-arg value="stc.skymobi.service.ISecondService" />
+			</bean>
+		</constructor-arg>
+	</bean>
+
+	<bean id="businessFlow" class="stc.skymobi.biz.LogBiz">
+		<property name="event" value="${response.event.name}" />
+		<property name="firstService">
+			<bean factory-bean="firstServiceBuilder" factory-method="buildProxy" />
+		</property>
+		<property name="secondService">
+			<bean factory-bean="secondServiceBuilder" factory-method="buildProxy" />
+		</property>
+	</bean>
+
+	<bean id="businessContext" class="stc.skymobi.fsm.core.SmartContextImpl"
+		singleton="false">
+		<constructor-arg ref="smartFsm" />
+		<property name="eventBus" ref="eventBus" />
+	</bean>
+</beans>
